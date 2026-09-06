@@ -1,6 +1,41 @@
 import XCTest
 @testable import Daliuren
-final class DaliurenTests:XCTestCase{
- func testSmoke()throws{let r=try calculateDaliuren(["date":"2026-04-10","hour":14,"minute":30,"timezone":"Asia/Shanghai"]);XCTAssertEqual((r["gongInfos"] as? [Any])?.count,12)}
- func testLateZi()throws{let a=try calculateDaliuren(["date":"2026-04-10","hour":23,"minute":30,"timezone":"Asia/Shanghai"]);let b=try calculateDaliuren(["date":"2026-04-11","hour":0,"minute":30,"timezone":"Asia/Shanghai"]);let ag=((a["dateInfo"] as! [String:Any])["ganZhi"] as! [String:Any]);let bg=((b["dateInfo"] as! [String:Any])["ganZhi"] as! [String:Any]);XCTAssertEqual(ag["day"] as? String,bg["day"] as? String);XCTAssertEqual(ag["hour"] as? String,bg["hour"] as? String)}
+
+final class DaliurenTests: XCTestCase {
+    func testFixedChartAndNightBoundary() throws {
+        let result = try calculateDaliuren([
+            "date": "2026-09-04", "hour": 18, "minute": 0,
+            "timezone": "Asia/Shanghai",
+        ])
+        XCTAssertEqual(result["algorithmVersion"] as? String, "daliuren-shizhan-v1")
+        let dateInfo = result["dateInfo"] as? [String: Any]
+        XCTAssertEqual(dateInfo?["diurnal"] as? Bool, false)
+        XCTAssertEqual(dateInfo?["yueJiang"] as? String, "巳")
+        let transmission = result["sanChuan"] as? [String: Any]
+        XCTAssertEqual((transmission?["chu"] as? [Any])?.first as? String, "午")
+        XCTAssertEqual(transmission?["method"] as? String, "元首")
+        XCTAssertEqual((result["gongInfos"] as? [Any])?.count, 12)
+    }
+
+    func testExactSolarTermTransition() throws {
+        let before = try calculateDaliuren([
+            "date": "2026-02-18", "hour": 22, "minute": 0,
+            "timezone": "Asia/Shanghai",
+        ])
+        let after = try calculateDaliuren([
+            "date": "2026-02-18", "hour": 23, "minute": 55,
+            "timezone": "Asia/Shanghai",
+        ])
+        XCTAssertEqual((before["dateInfo"] as? [String: Any])?["yueJiang"] as? String, "子")
+        XCTAssertEqual((after["dateInfo"] as? [String: Any])?["yueJiang"] as? String, "亥")
+    }
+
+    func testCanonical() throws {
+        let result = try canonicalDaliuren([
+            "date": "2026-09-04", "hour": 18, "minute": 0,
+            "timezone": "Asia/Shanghai",
+        ])
+        XCTAssertEqual((result["三传"] as? [Any])?.count, 3)
+        XCTAssertEqual((result["天地盘"] as? [Any])?.count, 12)
+    }
 }
