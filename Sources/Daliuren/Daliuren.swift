@@ -1,47 +1,16 @@
 import Foundation
+import LunarSwift
 
-public enum DaliurenError: Error {
-    case engineMissing
-    case execution(String)
-    case invalidOutput
-}
-
-private func runDaliuren(_ input: [String: Any]) throws -> [String: Any] {
-    guard let url = Bundle.module.url(forResource: "engine", withExtension: "cjs") else {
-        throw DaliurenError.engineMissing
-    }
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-    process.arguments = ["node", url.path]
-    let stdin = Pipe()
-    let stdout = Pipe()
-    process.standardInput = stdin
-    process.standardOutput = stdout
-    process.standardError = Pipe()
-    try process.run()
-    stdin.fileHandleForWriting.write(try JSONSerialization.data(withJSONObject: input))
-    stdin.fileHandleForWriting.closeFile()
-    process.waitUntilExit()
-    let output = stdout.fileHandleForReading.readDataToEndOfFile()
-    guard let envelope = try JSONSerialization.jsonObject(with: output) as? [String: Any] else {
-        throw DaliurenError.invalidOutput
-    }
-    if process.terminationStatus != 0 || (envelope["ok"] as? Bool) != true {
-        throw DaliurenError.execution(envelope["error"] as? String ?? "engine failed")
-    }
-    return envelope
-}
-
-public func calculateDaliuren(_ input: [String: Any]) throws -> [String: Any] {
-    guard let data = try runDaliuren(input)["data"] as? [String: Any] else {
-        throw DaliurenError.invalidOutput
-    }
-    return data
-}
-
-public func canonicalDaliuren(_ input: [String: Any]) throws -> [String: Any] {
-    guard let canonical = try runDaliuren(input)["canonical"] as? [String: Any] else {
-        throw DaliurenError.invalidOutput
-    }
-    return canonical
-}
+public enum DaliurenError: Error { case invalidInput(String) }
+private let g=["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"],z=["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"],jiang=["贵人","腾蛇","朱雀","六合","勾陈","青龙","天空","白虎","太常","玄武","太阴","天后"],short=["贵","蛇","雀","合","勾","龙","空","虎","常","玄","阴","后"],jian=["建","除","满","平","定","执","破","危","成","收","开","闭"],chang=["长生","沐浴","冠带","临官","帝旺","衰","病","死","墓","绝","胎","养"]
+private let jigong=["甲":"寅","乙":"辰","丙":"巳","戊":"巳","丁":"未","己":"未","庚":"申","辛":"戌","壬":"亥","癸":"丑"],yj=["雨水":"亥","惊蛰":"亥","春分":"戌","清明":"戌","谷雨":"酉","立夏":"酉","小满":"申","芒种":"申","夏至":"未","小暑":"未","大暑":"午","立秋":"午","处暑":"巳","白露":"巳","秋分":"辰","寒露":"辰","霜降":"卯","立冬":"卯","小雪":"寅","大雪":"寅","冬至":"丑","小寒":"丑","大寒":"子","立春":"子"],yn=["亥":"登明","戌":"河魁","酉":"从魁","申":"传送","未":"小吉","午":"胜光","巳":"太乙","辰":"天罡","卯":"太冲","寅":"功曹","丑":"大吉","子":"神后"]
+private let yang=["甲":"丑","戊":"丑","庚":"丑","乙":"子","己":"子","丙":"亥","丁":"亥","壬":"巳","癸":"巳","辛":"午"],yin=["甲":"未","戊":"未","庚":"未","乙":"申","己":"申","丙":"酉","丁":"酉","壬":"卯","癸":"卯","辛":"寅"],yima=["寅":"申","午":"申","戌":"申","申":"寅","子":"寅","辰":"寅","巳":"亥","酉":"亥","丑":"亥","亥":"巳","卯":"巳","未":"巳"],ding=["甲子":"卯","甲戌":"丑","甲申":"亥","甲午":"酉","甲辰":"未","甲寅":"巳"],tian=["未":"辰","丑":"辰","午":"寅","子":"寅","巳":"子","亥":"子","辰":"戌","戌":"戌","卯":"申","酉":"申","申":"午","寅":"午"],wx=["子":"水","丑":"土","寅":"木","卯":"木","辰":"土","巳":"火","午":"火","未":"土","申":"金","酉":"金","戌":"土","亥":"水","甲":"木","乙":"木","丙":"火","丁":"火","戊":"土","己":"土","庚":"金","辛":"金","壬":"水","癸":"水"],cstart=["甲":"亥","乙":"午","丙":"寅","丁":"酉","戊":"寅","己":"酉","庚":"巳","辛":"子","壬":"申","癸":"卯"]
+private let table:[String:[[String:String]]]={let u=Bundle.module.url(forResource:"sanchuan",withExtension:"json")!;return try! JSONSerialization.jsonObject(with:Data(contentsOf:u)) as! [String:[[String:String]]]}()
+private var jz:[String]{(0..<60).map{g[$0%10]+z[$0%12]}};private func mod(_ n:Int,_ d:Int)->Int{(n%d+d)%d};private func at(_ s:String,_ i:Int)->String{String(s[s.index(s.startIndex,offsetBy:i)])}
+private func xun(_ p:String)->[String]{let st=jz.firstIndex(of:p)!/10*10,u=Set((st..<st+10).map{at(jz[$0],1)});return[jz[st],z.filter{!u.contains($0)}.joined()]}
+private func relation(_ a:String,_ b:String)->String{if a==b{return"兄弟"};let s=["木":"火","火":"土","土":"金","金":"水","水":"木"],k=["木":"土","土":"水","水":"火","火":"金","金":"木"];if s[a]==b{return"子孙"};if k[a]==b{return"妻财"};if s[b]==a{return"父母"};return"官鬼"}
+private func cs(_ a:String,_ b:String)->String{var n=mod(z.firstIndex(of:b)!-z.firstIndex(of:cstart[a]!)!,12);if g.firstIndex(of:a)!%2==1{n=mod(z.firstIndex(of:cstart[a]!)!-z.firstIndex(of:b)!,12)};return chang[n]}
+private func wang(_ b:String,_ w:String)->String{let mm=["寅":"木","卯":"木","巳":"火","午":"火","申":"金","酉":"金","亥":"水","子":"水","辰":"土","未":"土","戌":"土","丑":"土"],c=["木","火","土","金","水"],m=mm[b]!,i=c.firstIndex(of:m)!;return w==m ? "旺":w==c[(i+1)%5] ? "相":w==c[(i+4)%5] ? "休":w==c[(i+3)%5] ? "囚":"死"}
+private func tao(_ b:String)->String{"寅午戌".contains(b) ? "卯":"申子辰".contains(b) ? "酉":"巳酉丑".contains(b) ? "午":"子"}
+public func calculateDaliuren(_ input:[String:Any])throws->[String:Any]{guard let ds=input["date"] as? String,ds.range(of:"^\\d{4}-\\d{2}-\\d{2}$",options:.regularExpression) != nil,let h=input["hour"] as? Int else{throw DaliurenError.invalidInput("输入无效")};let p=ds.split(separator:"-").map{Int($0)!},mi=input["minute"] as? Int ?? 0;var cal=Calendar(identifier:.gregorian);cal.timeZone=TimeZone(secondsFromGMT:0)!;guard let date=cal.date(from:DateComponents(year:p[0],month:p[1],day:p[2],hour:h,minute:mi)),cal.component(.day,from:date)==p[2] else{throw DaliurenError.invalidInput("日期无效")};let lunar=Solar(year:p[0],month:p[1],day:p[2],hour:h,minute:mi).lunar,pillars=[lunar.yearInGanZhiExact,lunar.monthInGanZhiExact,lunar.dayInGanZhiExact,lunar.timeInGanZhi],term=lunar.getPrevJieQi(wholeDay:false)!.name,mg=yj[term]!,dg=at(pillars[2],0),dz=at(pillars[2],1),hb=at(pillars[3],1),mz=at(pillars[1],1),xu=xun(pillars[2]),day="卯辰巳午未申".contains(hb);var hp=Array(repeating:"",count:12);for n in 0..<12{hp[mod(z.firstIndex(of:hb)!+n,12)]=z[mod(z.firstIndex(of:mg)!+n,12)]};let gui=(day ? yang:yin)[dg]!,gp=hp.firstIndex(of:gui)!,fw="亥子丑寅卯辰".contains(z[gp]);var jb=Array(repeating:"",count:12);for n in 0..<12{jb[mod(gp+(fw ? n:-n),12)]=jiang[n]};func lesson(_ lower:String)->[Any]{let up=hp[z.firstIndex(of:lower)!];return[up+lower,jb[hp.firstIndex(of:up)!]]};let k1=lesson(jigong[dg]!),k2=lesson(at(k1[0] as! String,0)),k3=lesson(dz),k4=lesson(at(k3[0] as! String,0));var dun=Dictionary(uniqueKeysWithValues:z.map{($0,"")});for n in 0..<10{dun[z[mod(z.firstIndex(of:at(xu[0],1))!+n,12)]]=g[n]};var jc=[String:String]();let js=hp.firstIndex(of:mz)!;for n in 0..<12{jc[z[mod(js+n,12)]]=jian[n]};let en=table[pillars[2]]![z.firstIndex(of:at(k1[0] as! String,0))!],combo=en["干支组合"]!,method=en["格局"]!;func tr(_ b:String)->[Any]{[b,jb[hp.firstIndex(of:b)!],relation(wx[dg]!,wx[b]!),dun[b]!]};let chu=tr(at(combo,0)),zhong=tr(at(combo,1)),mo=tr(at(combo,2));var dip=[String:String](),tpm=[String:String](),tjm=[String:String](),gong=[[String:Any]]();for n in 0..<12{dip["\(n)"]=z[n];tpm["\(n)"]=hp[n];tjm["\(n)"]=jb[n];gong.append(["diZhi":z[n],"tianZhi":hp[n],"tianJiang":jb[n],"tianJiangShort":short[jiang.firstIndex(of:jb[n])!],"dunGan":dun[z[n]]!,"changSheng":cs(dg,hp[n]),"wuXing":wx[hp[n]]!,"wangShuai":wang(mz,wx[hp[n]]!),"jianChu":jc[z[n]]!])};let di:[String:Any]=["solarDate":"\(p[0])年\(p[1])月\(p[2])日 \(h)时\(mi)分","bazi":pillars.joined(separator:" "),"ganZhi":["year":pillars[0],"month":pillars[1],"day":pillars[2],"hour":pillars[3]],"yueJiang":mg,"yueJiangName":yn[mg]!,"xun":xu[0],"kongWang":[at(xu[1],0),at(xu[1],1)],"yiMa":yima[dz]!,"dingMa":ding[xu[0]]!,"tianMa":tian[mz]!,"diurnal":day];return["algorithmVersion":"daliuren-shizhan-v1","dateInfo":di,"tianDiPan":["diPan":dip,"tianPan":tpm,"tianJiang":tjm],"siKe":["yiKe":k1,"erKe":k2,"sanKe":k3,"siKe":k4],"sanChuan":["chu":chu,"zhong":zhong,"mo":mo,"method":method],"keTi":["method":method,"subTypes":[method],"extraTypes":[]],"keName":"\(pillars[2])日 干上\(at(k1[0] as! String,0))","shenSha":[["name":"桃花","value":tao(dz),"description":"主桃花、感情、人缘。"]],"gongInfos":gong,"dunGan":dun,"jianChu":jc]}
+public func canonicalDaliuren(_ input:[String:Any])throws->[String:Any]{let r=try calculateDaliuren(input),di=r["dateInfo"] as! [String:Any],basic:[String:Any]=["占测时间":di["solarDate"]!,"昼夜":di["diurnal"] as! Bool ? "昼占":"夜占","四柱":di["bazi"]!,"课式":"\(r["keName"]!) / \((r["keTi"] as! [String:Any])["method"]!)课","月将":di["yueJiang"]!,"关键状态":["空亡":di["kongWang"]!,"驿马":di["yiMa"]!,"丁马":di["dingMa"]!,"天马":di["tianMa"]!]];var lessons=[[String:Any]]();let sk=r["siKe"] as! [String:[Any]];for n in 0..<4{let x=sk[["yiKe","erKe","sanKe","siKe"][n]]!,pair=x[0] as! String;lessons.append(["课别":["一课 (干上)","二课 (干阴)","三课 (支上)","四课 (支阴)"][n],"乘将":x[1],"上神":at(pair,0),"下神":at(pair,1)])};var trans=[[String:Any]]();let san=r["sanChuan"] as! [String:Any];for n in 0..<3{let x=san[["chu","zhong","mo"][n]] as! [Any];trans.append(["传序":["初传 (发端)","中传 (移易)","末传 (归计)"][n],"地支":x[0],"天将":x[1],"六亲":x[2],"遁干":x[3] as! String=="" ? "-":x[3]])};let board=(r["gongInfos"] as! [[String:Any]]).map{["地盘":$0["diZhi"]!,"五行":$0["wuXing"]!,"旺衰":$0["wangShuai"]!,"天盘":$0["tianZhi"]!,"天将":$0["tianJiang"]!,"遁干":$0["dunGan"] as! String=="" ? "-":$0["dunGan"]!,"长生十二神":$0["changSheng"]!]};return["基本信息":basic,"四课":lessons,"三传":trans,"天地盘":board]}

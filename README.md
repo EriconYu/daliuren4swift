@@ -1,6 +1,6 @@
 # daliuren4swift
 
-Swift 大六壬排盘 SDK，SwiftPM 资源内置经过版本锁定的排盘引擎。要求 Swift 5.5+ 和 Node.js 20+。
+Swift 原生大六壬排盘 SDK，历法使用 `LunarSwift`，SwiftPM 资源内置三传规则表。要求 Swift 5.5+，运行时不依赖 Node.js 或其他语言。
 
 ```swift
 let input: [String: Any] = [
