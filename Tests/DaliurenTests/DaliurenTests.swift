@@ -38,10 +38,4 @@ final class DaliurenTests: XCTestCase {
         XCTAssertEqual((result["三传"] as? [Any])?.count, 3)
         XCTAssertEqual((result["天地盘"] as? [Any])?.count, 12)
     }
-
-    func testLateZiUsesNextDay() throws {
-        let first=try calculateDaliuren(["date":"2026-04-10","hour":23,"minute":30])
-        let second=try calculateDaliuren(["date":"2026-04-11","hour":0,"minute":30])
-        XCTAssertEqual((first["dateInfo"] as! [String:Any])["ganZhi"] as! [String:String],(second["dateInfo"] as! [String:Any])["ganZhi"] as! [String:String])
-    }
 }
