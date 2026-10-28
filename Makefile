@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := help
+
 MAKEFILE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 BUILD_DIR := $(MAKEFILE_DIR)/.build
 
